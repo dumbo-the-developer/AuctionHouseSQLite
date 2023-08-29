@@ -9,6 +9,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.*;
 import java.util.Set;
 import java.util.UUID;
@@ -32,14 +34,26 @@ public class MySQL {
     @Getter
     @Setter
     private UUID transferring = null;
+    private static final String DATABASE_FILENAME = "database.db";
+    private File file;
+
+    public MySQL() {
+        File file = new File(plugin.getDataFolder(), DATABASE_FILENAME);
+        if (!file.exists()) {
+            try {
+                file.getParentFile().mkdirs();
+                file.createNewFile();
+                plugin.saveResource(DATABASE_FILENAME, false);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+        this.file = file;
+    }
+
 
     public boolean setup() {
         if (!connected) {
-            host = AuctionHouse.getInstance().getConfigFile().getDb_host();
-            database = AuctionHouse.getInstance().getConfigFile().getDb_database();
-            username = AuctionHouse.getInstance().getConfigFile().getDb_username();
-            password = AuctionHouse.getInstance().getConfigFile().getDb_password();
-            port = AuctionHouse.getInstance().getConfigFile().getDb_port();
             listingsTable = AuctionHouse.getInstance().getConfigFile().getDb_listings();
             expiredTable = AuctionHouse.getInstance().getConfigFile().getDb_expired();
             completedTable = AuctionHouse.getInstance().getConfigFile().getDb_completed();
@@ -49,9 +63,9 @@ public class MySQL {
             chat.log("", AuctionHouse.getInstance().isDebug());
 
             try {
-                Class.forName("com.mysql.cj.jdbc.Driver");
+                Class.forName("org.sqlite.JDBC");
                 chat.log("Connecting to the MySQL database...", AuctionHouse.getInstance().isDebug());
-                setConnection(DriverManager.getConnection("jdbc:mysql://" + this.host + ":" + this.port + "/" + this.database + "?autoReconnect=true", this.username, this.password));
+                setConnection(DriverManager.getConnection("jdbc:sqlite:" + file.getAbsolutePath()));
                 chat.log("", AuctionHouse.getInstance().isDebug());
                 chat.log(plugin.getName() + " has successfully established a connection to the MySQL database.", AuctionHouse.getInstance().isDebug());
                 chat.log("", AuctionHouse.getInstance().isDebug());
